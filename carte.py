@@ -37,3 +37,6 @@ def bouger(carte, *, de, vers):
     carte[de] = VIDE
     return carte
 
+def remplacer(carte, pos, valeur):
+    assert not case_vide(carte, pos), "Pas d'unité à l'emplacement {}".format(pos)
+    carte[pos] = valeur

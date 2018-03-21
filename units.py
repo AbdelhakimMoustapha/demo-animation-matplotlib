@@ -1,7 +1,9 @@
 import numpy as np
-import carte
 from enum import IntEnum
 import math
+import random
+
+import carte
 
 class Unites(IntEnum):
     HUMAIN = 1
@@ -15,7 +17,7 @@ class Unites(IntEnum):
 def spawn_humains(car, nb):
     n,m = car.shape
     humains = []
-    while nb > 0: 
+    while nb > 0:
         x = np.random.randint(n)
         y = np.random.randint(m)
         if carte.case_vide(car, (x,y)):
@@ -24,20 +26,26 @@ def spawn_humains(car, nb):
             humains.append((x,y))
     return car, humains
 
+# Deplace une unité (humain ou zombie) dans un voisinage
+def _bouger(cart, old_pos, voisinage):
+    for new_pos in voisins:
+        if new_pos == pos:
+            continue
+        if carte.case_vide(cart, new_pos):
+            cart = carte.bouger(cart, de=pos, vers=new_pos)
+            return new_pos
+    return None
+
 # Les humains se déplacent aléatoirement
 # parce qu'ils sont dans le noir et qu'ils ne voient pas où ils vont.
 def bouge_humains(cart, unites):
     for i in range(len(unites)):
         typ, pos = unites[i]
-        if typ is Unites.HUMAIN:  
+        if typ is Unites.HUMAIN:
             voisins = carte.rect_positions(cart, pos, 1)
-            for new_pos in voisins:
-                if new_pos == pos:
-                    continue
-                if carte.case_vide(cart, new_pos):
-                    cart = carte.bouger(cart, de=pos, vers=new_pos)
-                    unites[i] = (typ, new_pos)
-                    break
+            new_pos = _bouger(cart, pos, voisins)
+            if new_pos is not None:
+                unites[i] = (typ, new_pos)
 
 # Les zombies apparaissent en "meute"
 def spawn_zombies(car, nb):
@@ -45,7 +53,7 @@ def spawn_zombies(car, nb):
     zombies = []
     x = np.random.randint(n)
     y = np.random.randint(m)
-    rect = carte.rect_positions(car, (x,y), rayon = math.sqrt(nb))  
+    rect = carte.rect_positions(car, (x,y), rayon = math.sqrt(nb))
     idxs = np.random.choice(np.arange(len(rect)), size = len(rect), replace = False)
     for (x,y) in rect[idxs]:
         print((x,y))
@@ -59,18 +67,30 @@ def spawn_zombies(car, nb):
     return car, zombies
 
 # Les zombies chassent les humains
-def move_zombies(car, unites):
+def bouge_zombies(car, unites):
     for i in range(len(unites)):
         typ, pos = unites[i]
         if type is Unites.ZOMBIE:
-            # le zombie renifle les environs 
-            voisinage = carte.rect_positions(car, pos, 3)
-            voisinage = [tuple(p) for p in voisinage]
-            pos_humains = [p for p in voisinage if car[p] == Unites.HUMAIN] # TODO: rewrite using numpy?
-            proche = min(pos_humains,
-                    key = lambda xy: (pos[0] - xy[0]**2 + (pos[1] - xy[1])**2))
-            deplacements = carte.rect_positions(car, pos, 1)
-
-
-   
-
+            voisinage = carte.rect_positions(car, pos, 1)
+            # le zombie renifle les environs
+            environs = carte.rect_positions(car, pos, 3)
+            environs = [tuple(p) for p in environs]
+            pos_humains = [p for p in environs if car[p] == Unites.HUMAIN] # TODO: rewrite using numpy?
+            if len(pos_humains) > 0:
+                plus_proche = min(pos_humains,
+                        key = lambda xy: (pos[0] - xy[0]**2 + (pos[1] - xy[1])**2))
+                if plus_proche in voisinage: # À table !
+                    carte.remplacer(car, plus_proche, Unites.CADAVRE)
+                    # Remplacement dans la liste des unités
+                    j = unites.index((Unites.HUMAIN, plus_proche))
+                    unites[j] = (Unites.CADAVRE, plus_proche)
+                    new_pos = pos
+                else: # Déplacement en direction de plus_proche
+                    voisinage = sorted(voisinage,
+                            key = lambda xy: (plus_proche[0] - xy[0])**2
+                                           + (plus_proche[1] - xy[1])**2)
+                    new_pos = _bouger(cart, pos, voisinage)
+            else: # Pas d'humain dans les environs : direction aléatoire
+                new_pos = _bouger(cart, pos, voisinage)
+            if new_pos is not None:
+                unites[i] = (typ, new_pos)
