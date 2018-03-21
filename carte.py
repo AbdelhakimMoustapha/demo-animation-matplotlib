@@ -12,8 +12,11 @@ def nouvelle_carte(n = 15, m = None):
         m = n
     return np.zeros((n,m))
 
+def est_unite(carte, pos, unite):
+    return carte[pos] == unite
+
 def case_vide(carte, pos):
-    return carte[pos] == VIDE
+    return est_unite(carte, pos, VIDE)
 
 def ajoute_unite(carte, pos, unite):
     assert case_vide(carte, pos), "Déjà une unité {} à l'emplacement {}".format(carte[pos], pos)

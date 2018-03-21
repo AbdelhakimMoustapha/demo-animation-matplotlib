@@ -1,2 +1,3 @@
 Renommer les "carte"s en "world" et déplacer les listes d'unités dans le module
-"world".
+"world" ; éventuellement supprimer la matrice numpy, c'était une mauvaise idée
+de dupliquer les informations.
